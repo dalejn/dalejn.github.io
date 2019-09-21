@@ -9,7 +9,7 @@
 
   gtag('config', 'UA-123722492-1');
 </script>
-  <meta name=viewport content=“width=800”>
+  <meta name=viewport content="width=800">
   <meta name="generator" content="HTML Tidy for Linux/x86 (vers 11 February 2007), see www.w3.org">
   <style type="text/css">
     /* Color scheme stolen from Sergey Karayev */
@@ -20,6 +20,7 @@
     a:focus, a:hover {
     color: #f09228;
     text-decoration:none;
+    outline:none;
     }
     body,td,th,tr,p,a {
     font-family: 'Lato', Verdana, Helvetica, sans-serif;
@@ -65,19 +66,37 @@
     span.highlight {
         background-color: #ffffd0;
     }
+    .nav {
+      height: 50px;
+      overflow: hidden;
+      width: 100%;
+      font-size: 20px;
+    }
+    @media (max-width: 950px) {                  
+   .content-to-hide {
+      transition: all 300ms ease-in-out;
+      display: none;
+     }
+    }
   </style>
+  <link rel="stylesheet" href="main.css" class="next-head">
   <link rel="icon" type="image/png" href="icon.png">
   <title>Dale Zhou</title>
   <meta http-equiv="Content-Type" content="text/html; charset=us-ascii">
   <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+  <div class="content-to-hide"> 
+    <nav class="toc toc-right js-toc relative z-1 transition absolute pa4 is-position-fixed"></nav>
+  </div>
   </head>
   <body>
+  <div class="js-toc-content">
   <table width="800" border="0" align="center" cellspacing="0" cellpadding="0">
     <tr>
     <td>
       <table width="100%" align="center" border="0" cellspacing="0" cellpadding="20">
       <tr>
         <td width="67%" valign="middle">
+        <h1 id="About">About</h1>
         <p align="center">
           <name>Dale Zhou</name>
         </p>
@@ -111,15 +130,20 @@
       <!-- NEWS SECTION -->
       <table width="100%" align="center" border="0" cellspacing="0" cellpadding="20">
       <tr><td>
-      <heading>Latest</heading>
+      
+      <h2 id="Latest"><heading>Latest</heading></h2>
+      <div style="overflow-y: scroll; height:165px;">
       <ul>
+        <h3 id="2019">2019</h3>
         <li> Excited to be a co-author of this new pre-print, <i><a href="https://psyarxiv.com/undy4">Hunters, busybodies, and the knowledge network building associated with curiosity</a></i>, June 2019!</li>
         <li> Advanced to PhD candidacy, June 2019! Thank you to my advisors and committee, <a href="https://www.sas.upenn.edu/~bhatiasu/">Sudeep Bhatia</a>, <a href="https://jenkins-lab.weebly.com/people.html">Anna Jenkins</a>, <a href="http://koerding.com/">Konrad Kording</a>, and <a href="http://plattlabs.rocks/our-team">Michael Platt</a>.</li>
         <li> Co-authored manuscript in press at Journal of Complex Networks, <i><a href="https://academic.oup.com/comnet/advance-article/doi/10.1093/comnet/cnz023/5523024">Evolution of semantic networks in biomedical texts</a></i>, May 2019.
         <li> Received travel award to present at the <a href="http://www.cvent.com/events/brain-produces-mind-by-modeling/event-summary-2c1582af11414af791f15e057331a793.aspx">Sackler Colloquium, <i>Brain Produces Mind by Modeling</i></a>, April 2019.
+        <h3 id="2018">2018</h3>
         <li> Began the <a href="https://web.sas.upenn.edu/lcs/">Language and Communication Sciences Certificate Program</a>, part of the <a href="https://mindcore.sas.upenn.edu/about/">MindCORE's</a> initiative in <a href="https://web.sas.upenn.edu/langscience/about/">Integrated Language Science and Technology</a>, December 2018.  
         <li> Joined the <a href="https://www.danisbassett.com/">Complex Systems Group (PI: Danielle Bassett)</a> and <a href="https://www.satterthwaitelab.com/">Psychiatric and Developmental Imaging Laboratory (PI: Theodore Satterthwaite)</a>, August 2018!</li>
       </ul>
+      </div>
       </td></tr>
       </table>
       
@@ -127,7 +151,7 @@
       <table width="100%" align="center" border="0" cellspacing="0" cellpadding="20">
       <tr>
         <td width="100%" valign="middle">
-          <heading>Research</heading>
+          <h1 id="Research"><heading>Research</heading></h1>
           <p>
             My ongoing research addresses questions like: 
             <ol>
@@ -146,6 +170,8 @@
 
       <table width="100%" align="center" border="0" cellspacing="0" cellpadding="20">
       <!-- paper begin -->
+      <h2 id="Publications">Publications</h2>
+
       <tr>
       <td width="25%">
         <div class="one">
@@ -197,11 +223,24 @@
         <!-- paper end -->
     </table>
 
+    <table width="100%" align="center" border="0" cellspacing="0" cellpadding="20">
+      <tr>
+        <td width="100%" valign="middle">
+          <h1 id="CV"><heading>CV</heading></h1>
+           <iframe src="daleZhou_CV.pdf" width="100%" height="500px">
+           </iframe>
+        </td>
+      </tr>
+    </table>
+
   <table width="100%" align="center" border="0" cellspacing="0" cellpadding="20">
     <tr> <td> <br>
     <p align="right"> <font size="2">
       <a href="https://github.com/dalejn/dalejn.github.io/">Website source code</a>, adapted from <a href="https://github.com/jonbarron/jonbarron_website"> template</a>.
   </font> </p> </td> </tr> </table>
-      </table>
+  </table>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.min.js"></script>
+  <script src="main.js"></script>
+  </div>
   </body>
 </html>
