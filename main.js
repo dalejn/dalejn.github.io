@@ -83,3 +83,37 @@ tocbot.init({
   onClick: false
   
 });
+
+//Code to display on mobiles
+//========================================
+
+var swidth = window.screen.width;
+//These were the values of my website CSS container for portrait and landscape
+var vpwidth = 480;
+var vlwidth = 960;
+
+updateOrientation();
+
+window.addEventListener('orientationchange', updateOrientation, false);
+
+function updateOrientation() {
+
+
+  var viewport = document.querySelector("meta[name=viewport]");
+
+  switch (window.orientation) {
+	case 0: //portrait
+	  //set the viewport attributes to whatever you want!
+		viewport.setAttribute('content', 'width=' + vpwidth + ', initial-scale=0.25, maximum-scale=1.0;')
+	  break;
+	case 90: case -90: //landscape
+	  //set the viewport attributes to whatever you want!
+		viewport.setAttribute('content', 'width=' + vlwidth + ', initial-scale=0.25, maximum-scale=1.0;')
+	  break;
+	default:
+	  //set the viewport attributes to whatever you want!
+		viewport.setAttribute('content', 'width=' + vpwidth + ', initial-scale=0.25, maximum-scale=1.0;')
+	  break;
+  }
+	//alert(swidth + ' lead to an initial width of ' + vpwidth + ' and a rotate width of ' + vlwidth);
+}
