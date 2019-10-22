@@ -87,33 +87,43 @@ tocbot.init({
 //Code to display on mobiles
 //========================================
 
-// var swidth = window.screen.width;
-// //These were the values of my website CSS container for portrait and landscape
-// var vpwidth = 480;
-// var vlwidth = 960;
+var resize = function() {
+    $('body').removeClass('landscape').removeClass('portrait').addClass(orientation).css('width', $(window).width() + 'px');
+}
 
-// updateOrientation();
+var orientation = null;
 
-// window.addEventListener('orientationchange', updateOrientation, false);
+var onOrientationChange = function () {
+    switch(window.orientation) {  
+        case -90:
+        case 90:
+            orientation = 'landscape';
+        break; 
+        default:
+            orientation = 'portrait';
+        break;
+    }
 
-// function updateOrientation() {
+    if(screen.width < 768) {
+        if(orientation == 'landscape') {
+            var scale = Math.round(screen.height / 600 * 10) / 10;
+            $('#meta-viewport').attr('content', 'width=600px, initial-scale='+scale+', maximum-scale='+scale+', minimum-scale='+scale+', user-scalable=no'); // landscape mobile
+        } else {
+            var scale = Math.round(screen.width / 400 * 10) / 10;
+            $('#meta-viewport').attr('content', 'width=400px, initial-scale='+scale+', maximum-scale='+scale+', minimum-scale='+scale+', user-scalable=no'); // portrait mobile
+        }
+    } else if(screen.width >= 768 && screen.width < 1200) {
+        var scale = Math.round(screen.width / 960 * 10) / 10;
+        $('#meta-viewport').attr('content', 'width=960px, initial-scale='+scale+', maximum-scale='+scale+', minimum-scale='+scale+', user-scalable=no');
+    } else if(screen.width >= 1200) {
+        $('#meta-viewport').attr('content', 'width=device-width, user-scalable=yes');
+    }
 
+    resize();
+}
 
-//   var viewport = document.querySelector("meta[name=viewport]");
-
-//   switch (window.orientation) {
-// 	case 0: //portrait
-// 	  //set the viewport attributes to whatever you want!
-// 		viewport.setAttribute('content', 'width=' + vpwidth + ', initial-scale=0.25, maximum-scale=1.0;')
-// 	  break;
-// 	case 90: case -90: //landscape
-// 	  //set the viewport attributes to whatever you want!
-// 		viewport.setAttribute('content', 'width=' + vlwidth + ', initial-scale=0.25, maximum-scale=1.0;')
-// 	  break;
-// 	default:
-// 	  //set the viewport attributes to whatever you want!
-// 		viewport.setAttribute('content', 'width=' + vpwidth + ', initial-scale=0.25, maximum-scale=1.0;')
-// 	  break;
-//   }
-// 	//alert(swidth + ' lead to an initial width of ' + vpwidth + ' and a rotate width of ' + vlwidth);
-// }
+$(document).ready(function() {
+    $(window).resize(resize);
+    $(window).bind('orientationchange', onOrientationChange);
+    onOrientationChange();
+});
