@@ -305,3 +305,7 @@ details > summary:hover {
   text-decoration: none;
   outline: none;
 }
+
+.indented{
+    text-indent: 50px;
+}
