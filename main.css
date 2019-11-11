@@ -303,4 +303,5 @@ details > summary {
 details > summary:hover {
   color: #f09228;
   text-decoration: none;
+  outline: none;
 }
