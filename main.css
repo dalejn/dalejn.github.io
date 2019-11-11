@@ -293,3 +293,14 @@ button:focus {outline:0;}
 .w3-text-grey,.w3-hover-text-grey:hover,.w3-text-gray,.w3-hover-text-gray:hover{color:#757575!important}
 .w3-text-light-grey,.w3-hover-text-light-grey:hover,.w3-text-light-gray,.w3-hover-text-light-gray:hover{color:#f1f1f1!important}
 .w3-text-dark-grey,.w3-hover-text-dark-grey:hover,.w3-text-dark-gray,.w3-hover-text-dark-gray:hover{color:#3a3a3a!important}
+
+details > summary {
+  color: #1772d0;
+  text-decoration: none;
+  outline: none;
+}
+
+details > summary:hover {
+  color: #f09228;
+  text-decoration: none;
+}
