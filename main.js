@@ -10,7 +10,7 @@ tocbot.init({
   headingSelector: 'h1, h2, h3',
 
   // Headings that match the ignoreSelector will be skipped.
-  ignoreSelector: '.js-toc-ignore',
+  ignoreSelector: '',
 
   // Main class to add to links.
   linkClass: 'toc-link',
@@ -55,7 +55,7 @@ tocbot.init({
   scrollEndCallback: function (e) { },
 
   // Headings offset between the headings and the top of the document (this is meant for minor adjustments).
-  headingsOffset: 1,
+  headingsOffset: 0,
 
   // Timeout between events firing to make sure it's
   // not too rapid (for performance reasons).
@@ -80,9 +80,12 @@ tocbot.init({
   // onclick function to apply to all links in toc. will be called with
   // the event as the first parameter, and this can be used to stop,
   // propagation, prevent default or perform action
-  onClick: false
-  
-});
+  onClick: false,
+
+  // For headings inside relative or absolute positioned containers within content.
+  hasInnerContainers: true,
+
+}); 
 
 //Code to display on mobiles
 //========================================
