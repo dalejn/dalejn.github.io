@@ -7,7 +7,7 @@ tocbot.init({
   contentSelector: '.js-toc-content',
 
   // Which headings to grab inside of the contentSelector element.
-  headingSelector: 'h1, h2, h3',
+  headingSelector: 'h1, h2',
 
   // Headings that match the ignoreSelector will be skipped.
   ignoreSelector: '',
@@ -84,8 +84,8 @@ tocbot.init({
 
   // For headings inside relative or absolute positioned containers within content.
   hasInnerContainers: true,
-
 }); 
+
 
 //Code to display on mobiles
 //========================================
