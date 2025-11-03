@@ -364,6 +364,7 @@ details > summary:hover {
     text-indent: 50px;
 }
 
+<style>
 .network-graph-container {
     width: 160px;
     height: 160px;

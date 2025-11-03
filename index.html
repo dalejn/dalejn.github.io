@@ -280,9 +280,12 @@
     <tr onmouseout="" onmouseover="">
       <td style="padding:20px;width:25%;vertical-align:middle">
         <div class="one">
+          <!-- Add this where you want the graph to appear in your HTML -->
           <div id="network-graph" class="network-graph-container">
               <div class="graph-tooltip" id="graph-tooltip"></div>
           </div>
+
+          <!-- Add this script before your closing </body> tag -->
           <!-- Make sure D3.js is loaded first -->
           <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 
@@ -339,14 +342,14 @@
                       });
                   }
                   
-                  // Create links
+                  // Create links (draw them AFTER nodes so they appear on top)
                   linkElements = g.append("g")
                       .attr("class", "links")
                       .selectAll("line")
                       .data(data.links)
                       .enter().append("line")
                       .attr("stroke", d => d.weight > 0 ? "#4CAF50" : "#F44336")
-                      .attr("stroke-width", d => Math.max(0.5, Math.sqrt(Math.abs(d.value) * 4)));
+                      .attr("stroke-width", d => Math.max(1, Math.sqrt(Math.abs(d.value) * 10)));
 
                   // Create nodes
                   nodeElements = g.append("g")
@@ -403,11 +406,19 @@
                   
                   nodeElements.classed("dimmed", n => !connectedNodes.has(n.id));
 
+                  // Get container position to position tooltip correctly
+                  const containerRect = container.node().getBoundingClientRect();
                   const tooltip = d3.select(`#${tooltipId}`);
+                  
+                  // Position tooltip relative to the container
+                  const tooltipX = event.clientX - containerRect.left + 10;
+                  const tooltipY = event.clientY - containerRect.top - 30;
+                  
                   tooltip.style("display", "block")
+                      .style("position", "absolute")
                       .html(`<strong>${d.name}</strong><br>${d.type}`)
-                      .style("left", (event.pageX + 10) + "px")
-                      .style("top", (event.pageY - 30) + "px");
+                      .style("left", tooltipX + "px")
+                      .style("top", tooltipY + "px");
               }
 
               function handleMouseOut() {
