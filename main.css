@@ -363,3 +363,84 @@ details > summary:hover {
 .indented{
     text-indent: 50px;
 }
+
+.network-graph-container {
+    width: 160px;
+    height: 160px;
+    position: relative;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.network-graph-container svg {
+    display: block;
+}
+
+.network-graph-container .graph-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.92);
+    color: white;
+    padding: 6px 8px;
+    border-radius: 4px;
+    pointer-events: none;
+    font-size: 10px;
+    z-index: 2000;
+    display: none;
+    max-width: 200px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.network-graph-container .graph-tooltip strong {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 11px;
+    color: #FFD700;
+}
+
+.network-graph-container .loading-msg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 10px;
+    text-align: center;
+}
+
+.network-graph-container .links line {
+    stroke-opacity: 0.25;
+    transition: stroke-opacity 0.2s, stroke-width 0.2s;
+}
+
+.network-graph-container .nodes circle {
+    stroke: #fff;
+    stroke-width: 1px;
+    cursor: pointer;
+    transition: stroke-width 0.2s;
+}
+
+.network-graph-container .nodes circle:hover {
+    stroke-width: 2px;
+    stroke: #FFD700;
+}
+
+.network-graph-container .nodes circle.highlighted {
+    stroke: #FFD700;
+    stroke-width: 2px;
+}
+
+.network-graph-container .nodes circle.dimmed {
+    opacity: 0.15;
+}
+
+.network-graph-container .links line.highlighted {
+    stroke-opacity: 0.8;
+    stroke-width: 2px;
+}
+
+.network-graph-container .links line.dimmed {
+    stroke-opacity: 0.05;
+}

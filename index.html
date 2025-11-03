@@ -112,6 +112,8 @@
 
       <h1 id="Latest" align="center">Latest</h1>
       <div class="hanging-indent-container">
+      <span style="color: grey;">[2025-11]</span> Pre-print on the <a target="_blank" rel="noopener noreferrer" href="https://osf.io/preprints/psyarxiv/za7yx_v1">Neural dynamics of cognitive control: current tensions and future promise</a><br> 
+
       <span style="color: grey;">[2025-10]</span> Pre-print on <a target="_blank" rel="noopener noreferrer" href="https://www.biorxiv.org/content/10.1101/2025.10.12.681901v1">A compressed code for memory discrimination</a><br> 
 
       <span style="color: grey;">[2025-09]</span> Talk at the  <a target="_blank" rel="noopener noreferrer" href="https://dml.ucdavis.edu/events/bamm-bay-area-memory-meeting-2025">Bay Area Memory Meeting</a><br>
@@ -272,6 +274,216 @@
           <p>There is an enormous gulf between the instrumental goals we typically study and the hopes, dreams, and wishes that we seek to give life meaning. Even the worries and doubts we may naturally wish to avoid can be guides, signaling where attention, control, and reflection are most needed. What are goals, how are they represented, and how do they come into conflict? I puzzle over the form and function of goals using control theory at the behavioral and neural levels. At the neural unit, I am interested in how the explicit mathematical framework of dynamic and distributed signal propagation lays bare the strangeness of pairing a biological control function with beliefs about willpower, societal power structures, and the "right" kinds of goals. At the computational unit, I use reinforcement learning in complex environments to model pursuit of dynamic constellations of goals and motivations. These approaches can improve the coherence between biological models of psychiatric disease and the experience of mental illness.</p>
         </td>
       </tr>
+
+
+<!-- paper begin -->
+    <tr onmouseout="" onmouseover="">
+      <td style="padding:20px;width:25%;vertical-align:middle">
+        <div class="one">
+
+          <div id="network-graph" class="network-graph-container">
+              <div class="loading-msg">Loading graph...</div>
+              <div class="graph-tooltip" id="graph-tooltip"></div>
+          </div>
+
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+
+          <script>
+          (function() {
+              const containerId = 'network-graph';
+              const tooltipId = 'graph-tooltip';
+              const width = 160;
+              const height = 160;
+              const dataFile = 'graph_data_with_layout.json'; // Try different paths if needed:
+              // './graph_data_with_layout.json'
+              // '/graph_data_with_layout.json'
+              // 'data/graph_data_with_layout.json'
+              
+              // Sample data for fallback
+              const sampleData = {
+                  "nodes": [
+                      {"id": "0", "name": "adaptive_n_back", "type": "task_Speeded IP", "color": "#e42e5a", "degree": 5, "x": 100, "y": 100, "block": 0},
+                      {"id": "1", "name": "bis11_survey", "type": "survey_Mindfulness", "color": "#2e84e4", "degree": 8, "x": 300, "y": 150, "block": 1},
+                      {"id": "2", "name": "angling_risk", "type": "task_Strategic IP", "color": "#e4b02e", "degree": 3, "x": 200, "y": 300, "block": 0},
+                      {"id": "3", "name": "dospert", "type": "survey_Ethical", "color": "#59e42e", "degree": 6, "x": 400, "y": 250, "block": 2}
+                  ],
+                  "links": [
+                      {"source": "0", "target": "1", "weight": 0.15, "value": 0.15},
+                      {"source": "0", "target": "2", "weight": -0.08, "value": 0.08},
+                      {"source": "1", "target": "3", "weight": 0.12, "value": 0.12},
+                      {"source": "2", "target": "3", "weight": 0.07, "value": 0.07}
+                  ]
+              };
+
+              // Initialize
+              const container = d3.select(`#${containerId}`);
+              const loadingMsg = container.select(".loading-msg");
+              const svg = container.append("svg")
+                  .attr("width", width)
+                  .attr("height", height);
+
+              const g = svg.append("g");
+
+              // Add zoom
+              const zoom = d3.zoom()
+                  .scaleExtent([0.5, 5])
+                  .on("zoom", (event) => {
+                      g.attr("transform", event.transform);
+                  });
+
+              svg.call(zoom);
+
+              let linkElements, nodeElements;
+
+              // Load and render
+              function loadGraph(data) {
+                  loadingMsg.style("display", "none");
+                  g.selectAll("*").remove();
+                  
+                  // Scale positions
+                  if (data.nodes[0].x !== undefined) {
+                      const xExtent = d3.extent(data.nodes, d => d.x);
+                      const yExtent = d3.extent(data.nodes, d => d.y);
+                      const dataWidth = xExtent[1] - xExtent[0];
+                      const dataHeight = yExtent[1] - yExtent[0];
+                      const padding = 15;
+                      const availableWidth = width - 2 * padding;
+                      const availableHeight = height - 2 * padding;
+                      const scale = Math.min(availableWidth / dataWidth, availableHeight / dataHeight);
+                      
+                      data.nodes.forEach(node => {
+                          node.scaledX = padding + (node.x - xExtent[0]) * scale;
+                          node.scaledY = padding + (node.y - yExtent[0]) * scale;
+                          node.x = node.scaledX;
+                          node.y = node.scaledY;
+                          node.fx = node.scaledX;
+                          node.fy = node.scaledY;
+                      });
+                  }
+                  
+                  // Create links
+                  linkElements = g.append("g")
+                      .attr("class", "links")
+                      .selectAll("line")
+                      .data(data.links)
+                      .enter().append("line")
+                      .attr("stroke", d => d.weight > 0 ? "#4CAF50" : "#F44336")
+                      .attr("stroke-width", d => Math.max(0.5, Math.sqrt(Math.abs(d.value) * 5)));
+
+                  // Create nodes
+                  nodeElements = g.append("g")
+                      .attr("class", "nodes")
+                      .selectAll("circle")
+                      .data(data.nodes)
+                      .enter().append("circle")
+                      .attr("r", d => Math.max(2, Math.sqrt(d.degree) * 1.5 + 2))
+                      .attr("fill", d => d.color)
+                      .on("mouseover", handleMouseOver)
+                      .on("mouseout", handleMouseOut);
+
+                  updatePositions();
+                  
+                  // Fit to view
+                  setTimeout(() => {
+                      const bounds = g.node().getBBox();
+                      const fullWidth = width;
+                      const fullHeight = height;
+                      const scale = 0.9 * Math.min(fullWidth / bounds.width, fullHeight / bounds.height);
+                      const translate = [
+                          fullWidth / 2 - scale * (bounds.x + bounds.width / 2),
+                          fullHeight / 2 - scale * (bounds.y + bounds.height / 2)
+                      ];
+                      svg.call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
+                  }, 100);
+              }
+
+              function updatePositions() {
+                  linkElements
+                      .attr("x1", d => d.source.x)
+                      .attr("y1", d => d.source.y)
+                      .attr("x2", d => d.target.x)
+                      .attr("y2", d => d.target.y);
+
+                  nodeElements
+                      .attr("cx", d => d.x)
+                      .attr("cy", d => d.y);
+              }
+
+              function handleMouseOver(event, d) {
+                  d3.select(this).classed("highlighted", true);
+
+                  const connectedNodes = new Set([d.id]);
+                  linkElements.each(function(l) {
+                      if (l.source.id === d.id || l.target.id === d.id) {
+                          d3.select(this).classed("highlighted", true);
+                          connectedNodes.add(l.source.id);
+                          connectedNodes.add(l.target.id);
+                      } else {
+                          d3.select(this).classed("dimmed", true);
+                      }
+                  });
+                  
+                  nodeElements.classed("dimmed", n => !connectedNodes.has(n.id));
+
+                  const tooltip = d3.select(`#${tooltipId}`);
+                  const containerRect = container.node().getBoundingClientRect();
+                  tooltip.style("display", "block")
+                      .html(`<strong>${d.name}</strong>${d.type}<br>Connections: ${d.degree}`)
+                      .style("left", (event.pageX - containerRect.left + 10) + "px")
+                      .style("top", (event.pageY - containerRect.top - 10) + "px");
+              }
+
+              function handleMouseOut() {
+                  nodeElements.classed("highlighted", false).classed("dimmed", false);
+                  linkElements.classed("highlighted", false).classed("dimmed", false);
+                  d3.select(`#${tooltipId}`).style("display", "none");
+              }
+
+              // Load data with error handling
+              console.log('Attempting to load graph data from:', dataFile);
+              
+              d3.json(dataFile).then(data => {
+                  console.log('Successfully loaded graph data:', data);
+                  console.log('Number of nodes:', data.nodes.length);
+                  console.log('Number of links:', data.links.length);
+                  loadGraph(data);
+              }).catch(error => {
+                  console.error('Error loading graph data:', error);
+                  console.log('Using sample data instead');
+                  loadingMsg.html("Using sample data<br>(JSON not found)").style("font-size", "9px");
+                  setTimeout(() => {
+                      loadGraph(sampleData);
+                  }, 1000);
+              });
+          })();
+          </script>
+        </div>
+      </td>
+    
+      <td valign="top" width="75%">
+        <papertitle>Neural dynamics of cognitive control: current tensions and future promise</papertitle><br>
+        <a target="_blank" rel="noopener noreferrer" href="https://osf.io/preprints/psyarxiv/za7yx_v1"><strong>(Submitted)</strong></a><br><br>
+        Dale Zhou,
+        <a target="_blank" rel="noopener noreferrer" href="https://scholar.google.com/citations?user=fAkRXQoAAAAJ&hl=en">Danielle Cosme</a>,
+        <a target="_blank" rel="noopener noreferrer" href="https://scholar.google.com/citations?user=ley4o0sAAAAJ&hl=en">Yoona Kang</a>,
+        <a target="_blank" rel="noopener noreferrer" href="https://scholar.google.com/citations?user=G8fhxp0AAAAJ&hl=en">Ovidia Stanoi</a>,
+        <a target="_blank" rel="noopener noreferrer" href="https://scholar.google.com/citations?user=hyfkcO0AAAAJ&hl=en">David Lydon-Staley</a>, 
+        <a target="_blank" rel="noopener noreferrer" href="https://scholar.google.com/citations?user=U7svaOMAAAAJ&hl=en">Peter Mucha</a>,
+        <a target="_blank" rel="noopener noreferrer" href="https://scholar.google.com/citations?user=_fv3jjIAAAAJ&hl=en">Emily Falk</a>, 
+        <a target="_blank" rel="noopener noreferrer" href="https://scholar.google.com/citations?user=-GHfzbUAAAAJ&hl=en">Kevin Ochsner</a>,
+        <a target="_blank" rel="noopener noreferrer" href="https://scholar.google.com/citations?user=siYpAPsAAAAJ&hl=en">Dani Bassett</a>,
+        <br><br>
+        
+        <a target="_blank" rel="noopener noreferrer" class="link link_preprint" rel="external" href="https://osf.io/preprints/psyarxiv/za7yx_v1">Preprint</a> &nbsp <a target="_blank" rel="noopener noreferrer" class="link link_pdf" href="Zhou_cognitiveControl_review.pdf">PDF</a><br><br>
+        <details>
+        <summary>More</summary>
+          <p>While cognitive, computational, and systems neuroscience research has made substantial progress in studying the component processes of cognitive control, we argue that tensions and limitations persist and can be traced back to the philosophical and psychological origins of the control construct. These tensions include usage of metaphors for power structures and cultural expectations of how control should work. Such tensions limit the space of neuroscientific hypotheses tested and make it more difficult to weigh evidence against the intuitions of cultural metaphors and norms. In this review, we explain a novel network and dynamical systems approach to understanding cognitive control and describe its empirical evidence from neuroscience, psychology, and physics. </p>
+          <br>
+        </details>
+      </td>
+      </tr>
+      <!-- paper end -->
+
 
 <!-- paper begin -->
             <tr onmouseout="repulse_stop()" onmouseover="repulse_start()">
