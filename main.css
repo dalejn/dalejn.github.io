@@ -374,8 +374,11 @@ details > summary:hover {
     border: 1px solid #e0e0e0;
 }
 
-/* Tooltip is now global, not limited to inside container */
-.graph-tooltip {
+.network-graph-container svg {
+    display: block;
+}
+
+.network-graph-container .graph-tooltip {
     position: fixed;
     background: rgba(0, 0, 0, 0.92);
     color: white;
@@ -390,25 +393,46 @@ details > summary:hover {
     line-height: 1.3;
     white-space: nowrap;
 }
-.graph-tooltip strong {
+
+.network-graph-container .graph-tooltip strong {
     display: block;
     margin-bottom: 2px;
     font-size: 11px;
     color: #FFD700;
 }
 
-.links line {
-    stroke-opacity: 0.6;
-    stroke-width: 1.2px;
+.network-graph-container .links line {
+    stroke-opacity: 0.8;
+    transition: stroke-opacity 0.2s, stroke-width 0.2s;
 }
-.nodes circle {
+
+.network-graph-container .nodes circle {
     stroke: #fff;
     stroke-width: 0.5px;
     cursor: pointer;
     transition: stroke-width 0.2s;
-    opacity: 0.85;
+    opacity: 0.8;
 }
-.nodes circle:hover {
+
+.network-graph-container .nodes circle:hover {
     stroke-width: 2px;
     stroke: #FFD700;
+}
+
+.network-graph-container .nodes circle.highlighted {
+    stroke: #FFD700;
+    stroke-width: 2px;
+}
+
+.network-graph-container .nodes circle.dimmed {
+    opacity: 0.15;
+}
+
+.network-graph-container .links line.highlighted {
+    stroke-opacity: 0.8;
+    stroke-width: 2px;
+}
+
+.network-graph-container .links line.dimmed {
+    stroke-opacity: 0.05;
 }
