@@ -402,7 +402,7 @@ details > summary:hover {
 }
 
 .network-graph-container .links line {
-    stroke-opacity: 0.6;
+    stroke-opacity: 0.8;
     transition: stroke-opacity 0.2s, stroke-width 0.2s;
 }
 

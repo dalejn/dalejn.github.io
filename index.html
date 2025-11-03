@@ -280,164 +280,151 @@
     <tr onmouseout="" onmouseover="">
       <td style="padding:20px;width:25%;vertical-align:middle">
         <div class="one">
-            <div id="network-graph" class="network-graph-container">
-                <div class="graph-tooltip" id="graph-tooltip"></div>
-            </div>
+          <div id="network-graph" class="network-graph-container">
+              <div class="graph-tooltip" id="graph-tooltip"></div>
+          </div>
+          <!-- Make sure D3.js is loaded first -->
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 
-            <!-- Add this script before your closing </body> tag -->
-            <!-- Make sure D3.js is loaded first -->
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+          <script>
+          (function() {
+              // Configuration
+              const containerId = 'network-graph';
+              const tooltipId = 'graph-tooltip';
+              const width = 160;
+              const height = 160;
+              const dataFile = 'graph_data_with_layout.json';
 
-            <script>
-            (function() {
-                // PASTE YOUR graph_data_with_layout.json CONTENT HERE
-                // Open graph_data_with_layout.json, copy everything, and paste it here:
-                const graphData = {
-                    "nodes": [
-                        {"id": "0", "name": "adaptive_n_back", "type": "task_Speeded IP", "color": "#e42e5a", "degree": 5, "x": 100, "y": 100, "block": 0},
-                        {"id": "1", "name": "bis11_survey", "type": "survey_Mindfulness", "color": "#2e84e4", "degree": 8, "x": 300, "y": 150, "block": 1},
-                        {"id": "2", "name": "angling_risk", "type": "task_Strategic IP", "color": "#e4b02e", "degree": 3, "x": 200, "y": 300, "block": 0},
-                        {"id": "3", "name": "dospert", "type": "survey_Ethical", "color": "#59e42e", "degree": 6, "x": 400, "y": 250, "block": 2}
-                    ],
-                    "links": [
-                        {"source": "0", "target": "1", "weight": 0.15, "value": 0.15},
-                        {"source": "0", "target": "2", "weight": -0.08, "value": 0.08},
-                        {"source": "1", "target": "3", "weight": 0.12, "value": 0.12},
-                        {"source": "2", "target": "3", "weight": 0.07, "value": 0.07}
-                    ]
-                };
+              // Initialize
+              const container = d3.select(`#${containerId}`);
+              const svg = container.append("svg")
+                  .attr("width", width)
+                  .attr("height", height);
 
-                // Configuration
-                const containerId = 'network-graph';
-                const tooltipId = 'graph-tooltip';
-                const width = 160;
-                const height = 160;
+              const g = svg.append("g");
 
-                // Initialize
-                const container = d3.select(`#${containerId}`);
-                const svg = container.append("svg")
-                    .attr("width", width)
-                    .attr("height", height);
+              // Add zoom
+              const zoom = d3.zoom()
+                  .scaleExtent([0.5, 5])
+                  .on("zoom", (event) => {
+                      g.attr("transform", event.transform);
+                  });
 
-                const g = svg.append("g");
+              svg.call(zoom);
 
-                // Add zoom
-                const zoom = d3.zoom()
-                    .scaleExtent([0.5, 5])
-                    .on("zoom", (event) => {
-                        g.attr("transform", event.transform);
-                    });
+              let linkElements, nodeElements;
 
-                svg.call(zoom);
+              // Load and render
+              function loadGraph(data) {
+                  g.selectAll("*").remove();
+                  
+                  // Scale positions
+                  if (data.nodes[0].x !== undefined) {
+                      const xExtent = d3.extent(data.nodes, d => d.x);
+                      const yExtent = d3.extent(data.nodes, d => d.y);
+                      const dataWidth = xExtent[1] - xExtent[0];
+                      const dataHeight = yExtent[1] - yExtent[0];
+                      const padding = 15;
+                      const availableWidth = width - 2 * padding;
+                      const availableHeight = height - 2 * padding;
+                      const scale = Math.min(availableWidth / dataWidth, availableHeight / dataHeight);
+                      
+                      data.nodes.forEach(node => {
+                          node.scaledX = padding + (node.x - xExtent[0]) * scale;
+                          node.scaledY = padding + (node.y - yExtent[0]) * scale;
+                          node.x = node.scaledX;
+                          node.y = node.scaledY;
+                          node.fx = node.scaledX;
+                          node.fy = node.scaledY;
+                      });
+                  }
+                  
+                  // Create links
+                  linkElements = g.append("g")
+                      .attr("class", "links")
+                      .selectAll("line")
+                      .data(data.links)
+                      .enter().append("line")
+                      .attr("stroke", d => d.weight > 0 ? "#4CAF50" : "#F44336")
+                      .attr("stroke-width", d => Math.max(0.5, Math.sqrt(Math.abs(d.value) * 4)));
 
-                let linkElements, nodeElements;
+                  // Create nodes
+                  nodeElements = g.append("g")
+                      .attr("class", "nodes")
+                      .selectAll("circle")
+                      .data(data.nodes)
+                      .enter().append("circle")
+                      .attr("r", d => Math.max(1.5, Math.sqrt(d.degree) * 0.8 + 1))
+                      .attr("fill", d => d.color)
+                      .on("mouseover", handleMouseOver)
+                      .on("mouseout", handleMouseOut);
 
-                // Load and render
-                function loadGraph(data) {
-                    g.selectAll("*").remove();
-                    
-                    // Scale positions
-                    if (data.nodes[0].x !== undefined) {
-                        const xExtent = d3.extent(data.nodes, d => d.x);
-                        const yExtent = d3.extent(data.nodes, d => d.y);
-                        const dataWidth = xExtent[1] - xExtent[0];
-                        const dataHeight = yExtent[1] - yExtent[0];
-                        const padding = 15;
-                        const availableWidth = width - 2 * padding;
-                        const availableHeight = height - 2 * padding;
-                        const scale = Math.min(availableWidth / dataWidth, availableHeight / dataHeight);
-                        
-                        data.nodes.forEach(node => {
-                            node.scaledX = padding + (node.x - xExtent[0]) * scale;
-                            node.scaledY = padding + (node.y - yExtent[0]) * scale;
-                            node.x = node.scaledX;
-                            node.y = node.scaledY;
-                            node.fx = node.scaledX;
-                            node.fy = node.scaledY;
-                        });
-                    }
-                    
-                    // Create links
-                    linkElements = g.append("g")
-                        .attr("class", "links")
-                        .selectAll("line")
-                        .data(data.links)
-                        .enter().append("line")
-                        .attr("stroke", d => d.weight > 0 ? "#4CAF50" : "#F44336")
-                        .attr("stroke-width", d => Math.max(0.3, Math.sqrt(Math.abs(d.value) * 3)));
+                  updatePositions();
+                  
+                  // Fit to view
+                  setTimeout(() => {
+                      const bounds = g.node().getBBox();
+                      const fullWidth = width;
+                      const fullHeight = height;
+                      const scale = 0.9 * Math.min(fullWidth / bounds.width, fullHeight / bounds.height);
+                      const translate = [
+                          fullWidth / 2 - scale * (bounds.x + bounds.width / 2),
+                          fullHeight / 2 - scale * (bounds.y + bounds.height / 2)
+                      ];
+                      svg.call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
+                  }, 100);
+              }
 
-                    // Create nodes
-                    nodeElements = g.append("g")
-                        .attr("class", "nodes")
-                        .selectAll("circle")
-                        .data(data.nodes)
-                        .enter().append("circle")
-                        .attr("r", d => Math.max(1.5, Math.sqrt(d.degree) * 0.8 + 1))
-                        .attr("fill", d => d.color)
-                        .on("mouseover", handleMouseOver)
-                        .on("mouseout", handleMouseOut);
+              function updatePositions() {
+                  linkElements
+                      .attr("x1", d => d.source.x)
+                      .attr("y1", d => d.source.y)
+                      .attr("x2", d => d.target.x)
+                      .attr("y2", d => d.target.y);
 
-                    updatePositions();
-                    
-                    // Fit to view
-                    setTimeout(() => {
-                        const bounds = g.node().getBBox();
-                        const fullWidth = width;
-                        const fullHeight = height;
-                        const scale = 0.9 * Math.min(fullWidth / bounds.width, fullHeight / bounds.height);
-                        const translate = [
-                            fullWidth / 2 - scale * (bounds.x + bounds.width / 2),
-                            fullHeight / 2 - scale * (bounds.y + bounds.height / 2)
-                        ];
-                        svg.call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-                    }, 100);
-                }
+                  nodeElements
+                      .attr("cx", d => d.x)
+                      .attr("cy", d => d.y);
+              }
 
-                function updatePositions() {
-                    linkElements
-                        .attr("x1", d => d.source.x)
-                        .attr("y1", d => d.source.y)
-                        .attr("x2", d => d.target.x)
-                        .attr("y2", d => d.target.y);
+              function handleMouseOver(event, d) {
+                  d3.select(this).classed("highlighted", true);
 
-                    nodeElements
-                        .attr("cx", d => d.x)
-                        .attr("cy", d => d.y);
-                }
+                  const connectedNodes = new Set([d.id]);
+                  linkElements.each(function(l) {
+                      if (l.source.id === d.id || l.target.id === d.id) {
+                          d3.select(this).classed("highlighted", true);
+                          connectedNodes.add(l.source.id);
+                          connectedNodes.add(l.target.id);
+                      } else {
+                          d3.select(this).classed("dimmed", true);
+                      }
+                  });
+                  
+                  nodeElements.classed("dimmed", n => !connectedNodes.has(n.id));
 
-                function handleMouseOver(event, d) {
-                    d3.select(this).classed("highlighted", true);
+                  const tooltip = d3.select(`#${tooltipId}`);
+                  tooltip.style("display", "block")
+                      .html(`<strong>${d.name}</strong><br>${d.type}`)
+                      .style("left", (event.pageX + 10) + "px")
+                      .style("top", (event.pageY - 30) + "px");
+              }
 
-                    const connectedNodes = new Set([d.id]);
-                    linkElements.each(function(l) {
-                        if (l.source.id === d.id || l.target.id === d.id) {
-                            d3.select(this).classed("highlighted", true);
-                            connectedNodes.add(l.source.id);
-                            connectedNodes.add(l.target.id);
-                        } else {
-                            d3.select(this).classed("dimmed", true);
-                        }
-                    });
-                    
-                    nodeElements.classed("dimmed", n => !connectedNodes.has(n.id));
+              function handleMouseOut() {
+                  nodeElements.classed("highlighted", false).classed("dimmed", false);
+                  linkElements.classed("highlighted", false).classed("dimmed", false);
+                  d3.select(`#${tooltipId}`).style("display", "none");
+              }
 
-                    const tooltip = d3.select(`#${tooltipId}`);
-                    tooltip.style("display", "block")
-                        .html(`<strong>${d.name}</strong><br>${d.type}`)
-                        .style("left", (event.pageX + 10) + "px")
-                        .style("top", (event.pageY - 30) + "px");
-                }
-
-                function handleMouseOut() {
-                    nodeElements.classed("highlighted", false).classed("dimmed", false);
-                    linkElements.classed("highlighted", false).classed("dimmed", false);
-                    d3.select(`#${tooltipId}`).style("display", "none");
-                }
-
-                // Load the embedded data
-                loadGraph(graphData);
-            })();
-            </script>
+              // Load data from external JSON file
+              d3.json(dataFile).then(data => {
+                  console.log('Graph data loaded:', data.nodes.length, 'nodes,', data.links.length, 'links');
+                  loadGraph(data);
+              }).catch(error => {
+                  console.error('Error loading graph data:', error);
+              });
+          })();
+          </script>
         </div>
       </td>
     
