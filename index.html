@@ -291,14 +291,12 @@
 
           <script>
           (function() {
-              // Configuration
               const containerId = 'network-graph';
               const tooltipId = 'graph-tooltip';
               const width = 160;
               const height = 160;
               const dataFile = 'graph_data_with_layout.json';
 
-              // Initialize
               const container = d3.select(`#${containerId}`);
               const svg = container.append("svg")
                   .attr("width", width)
@@ -306,52 +304,47 @@
 
               const g = svg.append("g");
 
-              // Add zoom
+              // move tooltip to body so it can overflow
+              const tooltip = d3.select("body").append("div")
+                  .attr("class", "graph-tooltip")
+                  .attr("id", tooltipId);
+
               const zoom = d3.zoom()
                   .scaleExtent([0.5, 5])
-                  .on("zoom", (event) => {
-                      g.attr("transform", event.transform);
-                  });
-
+                  .on("zoom", (event) => g.attr("transform", event.transform));
               svg.call(zoom);
 
               let linkElements, nodeElements;
 
-              // Load and render
               function loadGraph(data) {
                   g.selectAll("*").remove();
-                  
-                  // Scale positions
+
                   if (data.nodes[0].x !== undefined) {
                       const xExtent = d3.extent(data.nodes, d => d.x);
                       const yExtent = d3.extent(data.nodes, d => d.y);
-                      const dataWidth = xExtent[1] - xExtent[0];
-                      const dataHeight = yExtent[1] - yExtent[0];
                       const padding = 15;
-                      const availableWidth = width - 2 * padding;
-                      const availableHeight = height - 2 * padding;
-                      const scale = Math.min(availableWidth / dataWidth, availableHeight / dataHeight);
-                      
+                      const scale = Math.min(
+                          (width - 2 * padding) / (xExtent[1] - xExtent[0]),
+                          (height - 2 * padding) / (yExtent[1] - yExtent[0])
+                      );
+
                       data.nodes.forEach(node => {
-                          node.scaledX = padding + (node.x - xExtent[0]) * scale;
-                          node.scaledY = padding + (node.y - yExtent[0]) * scale;
-                          node.x = node.scaledX;
-                          node.y = node.scaledY;
-                          node.fx = node.scaledX;
-                          node.fy = node.scaledY;
+                          node.x = padding + (node.x - xExtent[0]) * scale;
+                          node.y = padding + (node.y - yExtent[0]) * scale;
                       });
                   }
-                  
-                  // Create links (draw them AFTER nodes so they appear on top)
+
+                  // draw links FIRST so they are behind nodes
                   linkElements = g.append("g")
                       .attr("class", "links")
                       .selectAll("line")
                       .data(data.links)
                       .enter().append("line")
                       .attr("stroke", d => d.weight > 0 ? "#4CAF50" : "#F44336")
-                      .attr("stroke-width", d => Math.max(1, Math.sqrt(Math.abs(d.value) * 10)));
+                      .attr("stroke-width", d => Math.max(1, Math.sqrt(Math.abs(d.value) * 10)))
+                      .attr("stroke-opacity", 0.7);
 
-                  // Create nodes
+                  // draw nodes SECOND so they are on top
                   nodeElements = g.append("g")
                       .attr("class", "nodes")
                       .selectAll("circle")
@@ -363,16 +356,13 @@
                       .on("mouseout", handleMouseOut);
 
                   updatePositions();
-                  
-                  // Fit to view
+
                   setTimeout(() => {
                       const bounds = g.node().getBBox();
-                      const fullWidth = width;
-                      const fullHeight = height;
-                      const scale = 0.9 * Math.min(fullWidth / bounds.width, fullHeight / bounds.height);
+                      const scale = 0.9 * Math.min(width / bounds.width, height / bounds.height);
                       const translate = [
-                          fullWidth / 2 - scale * (bounds.x + bounds.width / 2),
-                          fullHeight / 2 - scale * (bounds.y + bounds.height / 2)
+                          width / 2 - scale * (bounds.x + bounds.width / 2),
+                          height / 2 - scale * (bounds.y + bounds.height / 2)
                       ];
                       svg.call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
                   }, 100);
@@ -403,39 +393,25 @@
                           d3.select(this).classed("dimmed", true);
                       }
                   });
-                  
                   nodeElements.classed("dimmed", n => !connectedNodes.has(n.id));
 
-                  // Get container position to position tooltip correctly
-                  const containerRect = container.node().getBoundingClientRect();
-                  const tooltip = d3.select(`#${tooltipId}`);
-                  
-                  // Position tooltip relative to the container
-                  const tooltipX = event.clientX - containerRect.left + 10;
-                  const tooltipY = event.clientY - containerRect.top - 30;
-                  
+                  // tooltip positioned globally (so it can overflow the container)
                   tooltip.style("display", "block")
-                      .style("position", "absolute")
-                      .html(`<strong>${d.name}</strong><br>${d.type}`)
-                      .style("left", tooltipX + "px")
-                      .style("top", tooltipY + "px");
+                      .style("left", (event.pageX + 10) + "px")
+                      .style("top", (event.pageY - 20) + "px")
+                      .html(`<strong>${d.name}</strong><br>${d.type}`);
               }
 
               function handleMouseOut() {
                   nodeElements.classed("highlighted", false).classed("dimmed", false);
                   linkElements.classed("highlighted", false).classed("dimmed", false);
-                  d3.select(`#${tooltipId}`).style("display", "none");
+                  tooltip.style("display", "none");
               }
 
-              // Load data from external JSON file
-              d3.json(dataFile).then(data => {
-                  console.log('Graph data loaded:', data.nodes.length, 'nodes,', data.links.length, 'links');
-                  loadGraph(data);
-              }).catch(error => {
-                  console.error('Error loading graph data:', error);
-              });
+              d3.json(dataFile).then(loadGraph).catch(console.error);
           })();
           </script>
+
         </div>
       </td>
     
