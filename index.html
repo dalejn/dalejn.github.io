@@ -383,10 +383,16 @@
               }
 
               simulation = d3.forceSimulation(data.nodes)
-                .force("link", d3.forceLink(data.links).id(d => d.id).distance(20))
-                .force("charge", d3.forceManyBody().strength(-20))  // much weaker
-                .force("center", d3.forceCenter(width / 2, height / 2))
-                .alphaDecay(0.2);
+                .force("link", d3.forceLink(data.links).id(d => d.id)
+                       .distance(d => {
+                         // Shorter distance for strong links to tighten clusters
+                         const val = Math.abs(d.weight ?? d.value ?? 0);
+                         return 15 + (1 - val) * 20;  // ranges ~15–35
+                       }))
+                .force("charge", d3.forceManyBody().strength(-50)) // stronger repulsion to separate clusters
+                .force("center", d3.forceCenter(width/2, height/2))
+                .force("collision", d3.forceCollide().radius(d => Math.max(3, Math.sqrt(d.degree || 1) * 0.8)))
+                .alphaDecay(0.08);
 
               // Compute min/max once
               const weights = data.links.map(l => Math.abs(l.weight ?? l.value ?? 0));
@@ -408,14 +414,14 @@
                 })
                 .attr("stroke-width", d => {
                   const nVal = normWeight(d.weight ?? d.value ?? 0);
-                  return Math.max(1, nVal * 5 + 0.5);  // wider max (was 2.5)
+                  return Math.max(1, nVal * 3.5 + 0.5);  // wider max (was 2.5)
                 });
 
 
               nodeElements = nodeGroup.selectAll("circle")
                 .data(data.nodes)
                 .enter().append("circle")
-                .attr("r", d => Math.max(1.5, Math.sqrt(d.degree || 1) * 0.8 + 1))
+                .attr("r", d => Math.max(1.5, Math.sqrt(d.degree || 1) * 1.5 + 1))
                 .attr("fill", d => d.color || "#999")
                 .on("mouseover", handleMouseOver)
                 .on("mouseout", handleMouseOut)
@@ -432,7 +438,7 @@
                 .attr("text-anchor", "middle")
                 .attr("pointer-events", "none")
                 .attr("fill", "#222")
-                .attr("dy", d => Math.max(1.5, Math.sqrt(d.degree || 1) * 0.8 + 1) + 8)
+                .attr("dy", d => Math.max(1.5, Math.sqrt(d.degree || 1) * 1.5 + 1) + 8)
                 .style("display", "none");
 
               simulation.on("tick", updatePositions);
