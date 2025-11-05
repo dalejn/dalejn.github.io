@@ -1,105 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Network Graph - Full View</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Network Graph — Full View</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <style>
-    body {
-      margin: 0;
-      font-family: 'Lato', Verdana, Helvetica, sans-serif;
-      background: #f5f5f5;
-      overflow: hidden;
-    }
-    .network-graph-container {
-      width: 100vw;
-      height: 100vh;
-      position: relative;
-      background: white;
-    }
+    html,body { height:100%; margin:0; background:#f5f5f5; font-family: Lato, Helvetica, sans-serif; }
+    #network-graph { width:100vw; height:100vh; background: #fff; position:relative; overflow:hidden; }
     .graph-tooltip {
-      position: fixed;
-      background: rgba(0, 0, 0, 0.92);
-      color: white;
-      padding: 6px 10px;
-      border-radius: 4px;
-      pointer-events: none;
-      font-size: 12px;
-      z-index: 2000;
-      display: none;
-      max-width: 250px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-      line-height: 1.4;
+      position: fixed; display:none;
+      background: rgba(0,0,0,0.92); color:#fff; padding:8px 10px; border-radius:4px;
+      z-index:2000; font-size:13px; max-width:320px; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }
-    .graph-tooltip strong {
-      display: block;
-      margin-bottom: 3px;
-      font-size: 14px;
-      color: #FFD700;
-    }
+    .links line { stroke-opacity:0.6; transition: stroke-opacity .15s, stroke-width .15s; }
+    .nodes circle { stroke:#fff; stroke-width:1.5px; cursor:grab; transition: stroke-width .15s; }
+    .nodes circle:hover { stroke-width:3px; stroke:#FFD700; }
+    .nodes circle.highlighted { stroke:#FFD700; stroke-width:3px; }
+    .nodes circle.dimmed { opacity:0.12; }
+    .links line.highlighted { stroke-opacity:1; }
+    .links line.dimmed { stroke-opacity:0.06; }
+    .node-labels text { font-size:11px; pointer-events:none; text-anchor:middle; fill:#000; font-weight:500; }
   </style>
 </head>
 <body>
-  <div id="network-graph" class="network-graph-container">
-    <div class="graph-tooltip" id="graph-tooltip"></div>
-  </div>
+  <div id="network-graph"><div class="graph-tooltip" id="graph-tooltip"></div></div>
 
   <script>
-  (function() {
+  (function(){
     const containerId = 'network-graph';
     const tooltipId = 'graph-tooltip';
     const width = window.innerWidth;
     const height = window.innerHeight;
     const dataFile = 'graph_data_with_layout.json';
 
-    const container = d3.select("#" + containerId);
-    const svg = container.append("svg")
-        .attr("width", width)
-        .attr("height", height);
+    const container = d3.select('#' + containerId);
+    const svg = container.append('svg').attr('width', width).attr('height', height);
+    const g = svg.append('g');
 
-    const g = svg.append("g");
-    const zoom = d3.zoom()
-        .scaleExtent([0.3, 5])
-        .on("zoom", (event) => g.attr("transform", event.transform));
+    const zoom = d3.zoom().scaleExtent([0.3,6]).on('zoom', (e)=> g.attr('transform', e.transform));
+    svg.call(zoom)
+       .on("wheel.zoom", function(event){ event.preventDefault(); }, { passive: false });
 
-    svg.call(zoom);
+    const linkGroup = g.append('g').attr('class','links');
+    const nodeGroup = g.append('g').attr('class','nodes');
+    const labelGroup = g.append('g').attr('class','node-labels');
 
-    const linkGroup = g.append("g").attr("class", "links");
-    const nodeGroup = g.append("g").attr("class", "nodes");
+    let linkElements, nodeElements, labelElements, simulation;
 
-    function loadGraph(data) {
-      const link = linkGroup.selectAll("line")
-          .data(data.links)
-          .enter().append("line")
-          .attr("stroke", "#000")
-          .attr("stroke-opacity", 0.6)
-          .attr("stroke-width", 1);
-
-      const node = nodeGroup.selectAll("circle")
-          .data(data.nodes)
-          .enter().append("circle")
-          .attr("r", 5)
-          .attr("fill", d => d.color || "#999");
-
-      d3.forceSimulation(data.nodes)
-          .force("link", d3.forceLink(data.links).id(d => d.id).distance(30))
-          .force("charge", d3.forceManyBody().strength(-100))
-          .force("center", d3.forceCenter(width / 2, height / 2))
-          .on("tick", () => {
-              link
-                  .attr("x1", d => d.source.x)
-                  .attr("y1", d => d.source.y)
-                  .attr("x2", d => d.target.x)
-                  .attr("y2", d => d.target.y);
-              node
-                  .attr("cx", d => d.x)
-                  .attr("cy", d => d.y);
-          });
+    function edgeColorFromWeight(w) {
+      const mag = Math.min(1, Math.abs(w || 0));
+      const gray = Math.round(255 - 200 * mag);
+      return `rgb(${gray},${gray},${gray})`;
     }
 
-    d3.json(dataFile).then(loadGraph)
-        .catch(err => console.error('Error loading graph data:', err));
+    function loadGraph(data) {
+      linkGroup.selectAll('*').remove();
+      nodeGroup.selectAll('*').remove();
+      labelGroup.selectAll('*').remove();
+
+      // If nodes have x,y (saved layout), use them as starting pos and then relax
+      const hasLayout = data.nodes.length && data.nodes[0].x !== undefined && data.nodes[0].y !== undefined;
+      if (hasLayout) {
+        const xExtent = d3.extent(data.nodes, d => d.x);
+        const yExtent = d3.extent(data.nodes, d => d.y);
+        const padding = Math.min(width, height) * 0.05;
+        const scale = Math.min((width - 2*padding) / (xExtent[1]-xExtent[0] || 1),
+                               (height - 2*padding) / (yExtent[1]-yExtent[0] || 1));
+        data.nodes.forEach(n => {
+          n.x = padding + (n.x - xExtent[0]) * scale;
+          n.y = padding + (n.y - yExtent[0]) * scale;
+        });
+      }
+
+      simulation = d3.forceSimulation(data.nodes)
+        .force('link', d3.forceLink(data.links).id(d=>d.id).distance(30))
+        .force('charge', d3.forceManyBody().strength(-120))
+        .force('center', d3.forceCenter(width/2, height/2))
+        .force('collision', d3.forceCollide().radius(d => Math.max(6, Math.sqrt(d.degree||1)*1.5)));
+
+      linkElements = linkGroup.selectAll('line')
+        .data(data.links).enter().append('line')
+        .attr('stroke', d => edgeColorFromWeight(d.weight !== undefined ? d.weight : (d.value !== undefined ? d.value : 0.5)))
+        .attr('stroke-width', d => Math.max(0.6, Math.abs(d.weight !== undefined ? d.weight : (d.value !== undefined ? d.value : 0.5)) * 2.2));
+
+      nodeElements = nodeGroup.selectAll('circle')
+        .data(data.nodes).enter().append('circle')
+        .attr('r', d => Math.max(3, Math.sqrt(d.degree||1)*1.6 + 2))
+        .attr('fill', d => d.color || '#999')
+        .on('mouseover', handleMouseOver)
+        .on('mouseout', handleMouseOut)
+        .call(d3.drag()
+          .on('start', dragStarted)
+          .on('drag', dragged)
+          .on('end', dragEnded));
+
+      labelElements = labelGroup.selectAll('text')
+        .data(data.nodes).enter().append('text')
+        .text(d => d.name || d.id)
+        .attr('font-size','11px')
+        .attr('text-anchor','middle')
+        .attr('pointer-events','none')
+        .attr('fill','#000')
+        .attr('dy', d => Math.max(3, Math.sqrt(d.degree||1)*1.6 + 2) + 14)
+        .style('display','none');
+
+      simulation.on('tick', () => {
+        linkElements
+          .attr('x1', d => d.source.x)
+          .attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x)
+          .attr('y2', d => d.target.y);
+        nodeElements
+          .attr('cx', d => d.x)
+          .attr('cy', d => d.y);
+        labelElements
+          .attr('x', d => d.x)
+          .attr('y', d => d.y);
+      });
+
+      // If there was a saved layout, gently hold positions briefly so user sees that layout,
+      // then release so drag+physics works normally.
+      if (hasLayout) {
+        data.nodes.forEach(n => { n.fx = n.x; n.fy = n.y; });
+        setTimeout(() => {
+          data.nodes.forEach(n => { n.fx = null; n.fy = null; });
+          simulation.alpha(0.45).restart();
+        }, 350);
+      }
+
+      // fit to view
+      setTimeout(() => {
+        try {
+          const b = g.node().getBBox();
+          const scale = 0.85 * Math.min(width / b.width, height / b.height);
+          const tx  = width/2 - scale*(b.x + b.width/2);
+          const ty  = height/2 - scale*(b.y + b.height/2);
+          svg.transition().duration(600).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+        } catch(e) { /* bbox might fail on empty */ }
+      }, 600);
+    }
+
+    function dragStarted(event, d) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x; d.fy = d.y;
+    }
+    function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+    function dragEnded(event, d) {
+      if (!event.active) simulation.alphaTarget(0);
+      setTimeout(()=> { d.fx = null; d.fy = null; simulation.alpha(0.3).restart(); }, 500);
+    }
+
+    function handleMouseOver(event, d) {
+      d3.select(this).classed('highlighted', true);
+      const connected = new Set([d.id]);
+      linkElements.each(function(l){
+        const sid = (typeof l.source === 'object')? l.source.id : l.source;
+        const tid = (typeof l.target === 'object')? l.target.id : l.target;
+        if (sid === d.id || tid === d.id) {
+          d3.select(this).classed('highlighted', true);
+          connected.add(sid); connected.add(tid);
+        } else {
+          d3.select(this).classed('dimmed', true);
+        }
+      });
+      nodeElements.classed('dimmed', n => !connected.has(n.id));
+      labelElements.style('display', n => connected.has(n.id) ? 'block' : 'none');
+
+      const tooltip = d3.select('#' + tooltipId);
+      tooltip.style('display','block')
+        .html(`<strong>${d.name || d.id}</strong><br>${d.type || 'Node'}`)
+        .style('left', (event.pageX + 10) + 'px')
+        .style('top', (event.pageY - 30) + 'px');
+    }
+
+    function handleMouseOut() {
+      nodeElements.classed('highlighted', false).classed('dimmed', false);
+      linkElements.classed('highlighted', false).classed('dimmed', false);
+      labelElements.style('display','none');
+      d3.select('#' + tooltipId).style('display','none');
+    }
+
+    // load
+    d3.json(dataFile).then(data => {
+      console.log('Full graph data loaded:', data.nodes.length, 'nodes,', data.links.length, 'links');
+      loadGraph(data);
+    }).catch(err=> console.error('Error loading graph data:', err));
+
+    // make responsive on resize
+    window.addEventListener('resize', () => {
+      const w = window.innerWidth, h = window.innerHeight;
+      svg.attr('width', w).attr('height', h);
+    });
   })();
   </script>
 </body>
