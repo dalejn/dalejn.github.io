@@ -8,11 +8,8 @@
   <style>
     html,body { height:100%; margin:0; background:#f5f5f5; font-family: Lato, Helvetica, sans-serif; }
     #network-graph { width:100vw; height:100vh; background: #fff; position:relative; overflow:hidden; }
-    .graph-tooltip {
-      position: fixed; display:none;
-      background: rgba(0,0,0,0.92); color:#fff; padding:8px 10px; border-radius:4px;
-      z-index:2000; font-size:13px; max-width:320px; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    }
+    /* tooltip exists but we'll not use it on full page (kept for safe fallback) */
+    .graph-tooltip { position: fixed; display:none; background: rgba(0,0,0,0.92); color:#fff; padding:8px 10px; border-radius:4px; z-index:2000; font-size:13px; max-width:320px; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
     .links line { stroke-opacity:0.6; transition: stroke-opacity .15s, stroke-width .15s; }
     .nodes circle { stroke:#fff; stroke-width:1.5px; cursor:grab; transition: stroke-width .15s; }
     .nodes circle:hover { stroke-width:3px; stroke:#FFD700; }
@@ -35,12 +32,16 @@
     const dataFile = 'graph_data_with_layout.json';
 
     const container = d3.select('#' + containerId);
+    // prevent double init
+    if (container.select('svg').size() > 0) { console.warn('Full graph already initialized'); return; }
+
     const svg = container.append('svg').attr('width', width).attr('height', height);
     const g = svg.append('g');
 
-    const zoom = d3.zoom().scaleExtent([0.3,6]).on('zoom', (e)=> g.attr('transform', e.transform));
-    svg.call(zoom)
-       .on("wheel.zoom", function(event){ event.preventDefault(); }, { passive: false });
+    const zoom = d3.zoom().scaleExtent([0.25, 6]).on('zoom', (e)=> g.attr('transform', e.transform));
+    svg.call(zoom);
+    svg.node().addEventListener('wheel', function(e){ e.preventDefault(); }, { passive: false });
+    svg.on("dblclick.zoom", null); // disable dblclick zoom
 
     const linkGroup = g.append('g').attr('class','links');
     const nodeGroup = g.append('g').attr('class','nodes');
@@ -50,7 +51,7 @@
 
     function edgeColorFromWeight(w) {
       const mag = Math.min(1, Math.abs(w || 0));
-      const gray = Math.round(255 - 200 * mag);
+      const gray = Math.round(255 - 125 * mag);
       return `rgb(${gray},${gray},${gray})`;
     }
 
@@ -59,17 +60,23 @@
       nodeGroup.selectAll('*').remove();
       labelGroup.selectAll('*').remove();
 
-      // If nodes have x,y (saved layout), use them as starting pos and then relax
-      const hasLayout = data.nodes.length && data.nodes[0].x !== undefined && data.nodes[0].y !== undefined;
+      // store original JSON coordinates so we can snap back exactly
+      data.nodes.forEach(n => {
+        n.origX = (n.x !== undefined) ? n.x : null;
+        n.origY = (n.y !== undefined) ? n.y : null;
+      });
+
+      const hasLayout = data.nodes.length && data.nodes[0].origX !== null;
       if (hasLayout) {
-        const xExtent = d3.extent(data.nodes, d => d.x);
-        const yExtent = d3.extent(data.nodes, d => d.y);
+        const xExtent = d3.extent(data.nodes, d => d.origX);
+        const yExtent = d3.extent(data.nodes, d => d.origY);
         const padding = Math.min(width, height) * 0.05;
         const scale = Math.min((width - 2*padding) / (xExtent[1]-xExtent[0] || 1),
                                (height - 2*padding) / (yExtent[1]-yExtent[0] || 1));
         data.nodes.forEach(n => {
-          n.x = padding + (n.x - xExtent[0]) * scale;
-          n.y = padding + (n.y - yExtent[0]) * scale;
+          // store scaled positions so we can use them as starting positions
+          n.x = padding + (n.origX - xExtent[0]) * scale;
+          n.y = padding + (n.origY - yExtent[0]) * scale;
         });
       }
 
@@ -77,12 +84,13 @@
         .force('link', d3.forceLink(data.links).id(d=>d.id).distance(30))
         .force('charge', d3.forceManyBody().strength(-120))
         .force('center', d3.forceCenter(width/2, height/2))
-        .force('collision', d3.forceCollide().radius(d => Math.max(6, Math.sqrt(d.degree||1)*1.5)));
+        .force('collision', d3.forceCollide().radius(d => Math.max(6, Math.sqrt(d.degree||1)*1.5)))
+        .alphaDecay(0.06);
 
       linkElements = linkGroup.selectAll('line')
         .data(data.links).enter().append('line')
         .attr('stroke', d => edgeColorFromWeight(d.weight !== undefined ? d.weight : (d.value !== undefined ? d.value : 0.5)))
-        .attr('stroke-width', d => Math.max(0.6, Math.abs(d.weight !== undefined ? d.weight : (d.value !== undefined ? d.value : 0.5)) * 2.2));
+        .attr('stroke-width', d => Math.max(1.0, Math.abs(d.weight !== undefined ? d.weight : (d.value !== undefined ? d.value : 1.0)) * 2.5));
 
       nodeElements = nodeGroup.selectAll('circle')
         .data(data.nodes).enter().append('circle')
@@ -119,8 +127,8 @@
           .attr('y', d => d.y);
       });
 
-      // If there was a saved layout, gently hold positions briefly so user sees that layout,
-      // then release so drag+physics works normally.
+      // If layout provided, hold positions briefly so user sees saved layout,
+      // then release so drag/physics work normally.
       if (hasLayout) {
         data.nodes.forEach(n => { n.fx = n.x; n.fy = n.y; });
         setTimeout(() => {
@@ -137,62 +145,9 @@
           const tx  = width/2 - scale*(b.x + b.width/2);
           const ty  = height/2 - scale*(b.y + b.height/2);
           svg.transition().duration(600).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
-        } catch(e) { /* bbox might fail on empty */ }
+        } catch(e) {}
       }, 600);
     }
 
     function dragStarted(event, d) {
-      if (!event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x; d.fy = d.y;
-    }
-    function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
-    function dragEnded(event, d) {
-      if (!event.active) simulation.alphaTarget(0);
-      setTimeout(()=> { d.fx = null; d.fy = null; simulation.alpha(0.3).restart(); }, 500);
-    }
-
-    function handleMouseOver(event, d) {
-      d3.select(this).classed('highlighted', true);
-      const connected = new Set([d.id]);
-      linkElements.each(function(l){
-        const sid = (typeof l.source === 'object')? l.source.id : l.source;
-        const tid = (typeof l.target === 'object')? l.target.id : l.target;
-        if (sid === d.id || tid === d.id) {
-          d3.select(this).classed('highlighted', true);
-          connected.add(sid); connected.add(tid);
-        } else {
-          d3.select(this).classed('dimmed', true);
-        }
-      });
-      nodeElements.classed('dimmed', n => !connected.has(n.id));
-      labelElements.style('display', n => connected.has(n.id) ? 'block' : 'none');
-
-      const tooltip = d3.select('#' + tooltipId);
-      tooltip.style('display','block')
-        .html(`<strong>${d.name || d.id}</strong><br>${d.type || 'Node'}`)
-        .style('left', (event.pageX + 10) + 'px')
-        .style('top', (event.pageY - 30) + 'px');
-    }
-
-    function handleMouseOut() {
-      nodeElements.classed('highlighted', false).classed('dimmed', false);
-      linkElements.classed('highlighted', false).classed('dimmed', false);
-      labelElements.style('display','none');
-      d3.select('#' + tooltipId).style('display','none');
-    }
-
-    // load
-    d3.json(dataFile).then(data => {
-      console.log('Full graph data loaded:', data.nodes.length, 'nodes,', data.links.length, 'links');
-      loadGraph(data);
-    }).catch(err=> console.error('Error loading graph data:', err));
-
-    // make responsive on resize
-    window.addEventListener('resize', () => {
-      const w = window.innerWidth, h = window.innerHeight;
-      svg.attr('width', w).attr('height', h);
-    });
-  })();
-  </script>
-</body>
-</html>
+      if (!event.active) s
