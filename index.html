@@ -375,7 +375,7 @@
                 const dataWidth = (xExtent[1] - xExtent[0]) || 1;
                 const dataHeight = (yExtent[1] - yExtent[0]) || 1;
                 const padding = 8;
-                const scale = Math.min((width - 2*padding) / dataWidth, (height - 2*padding) / dataHeight);
+                const scale = Math.min((width - 2*padding) / dataWidth, (height - 2*padding) / dataHeight)*0.25;
                 data.nodes.forEach(n => {
                   n.x = padding + (n.origX - xExtent[0]) * scale;
                   n.y = padding + (n.origY - yExtent[0]) * scale;
@@ -389,16 +389,27 @@
                 .force("collision", d3.forceCollide().radius(d => Math.max(4, (Math.sqrt(d.degree||1)*0.8))))
                 .alphaDecay(0.08);
 
+              // Compute min/max once
+              const weights = data.links.map(l => Math.abs(l.weight ?? l.value ?? 0));
+              const wMin = Math.min(...weights);
+              const wMax = Math.max(...weights);
+
+              function normWeight(val) {
+                return (Math.abs(val) - wMin) / (wMax - wMin || 1);  // 0-1
+              }
+
+              // Apply to link stroke & width
               linkElements = linkGroup.selectAll("line")
                 .data(data.links)
                 .enter().append("line")
                 .attr("stroke", d => {
-                  const val = d.weight !== undefined ? d.weight : (d.value !== undefined ? d.value : 0.5);
-                  return edgeColorFromWeight(val);
+                  const nVal = normWeight(d.weight ?? d.value ?? 0);
+                  const gray = Math.round(255 - 125 * nVal);
+                  return `rgb(${gray},${gray},${gray})`;
                 })
                 .attr("stroke-width", d => {
-                  const val = d.weight !== undefined ? d.weight : (d.value !== undefined ? d.value : 0.5);
-                  return Math.max(1.0, Math.abs(val) * 2.5);
+                  const nVal = normWeight(d.weight ?? d.value ?? 0);
+                  return Math.max(1.0, nVal * 3);   // width scaled to 1–3
                 });
 
               nodeElements = nodeGroup.selectAll("circle")
