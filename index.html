@@ -383,11 +383,10 @@
               }
 
               simulation = d3.forceSimulation(data.nodes)
-                .force("link", d3.forceLink(data.links).id(d => d.id).distance(30))
-                .force("charge", d3.forceManyBody().strength(-80))
+                .force("link", d3.forceLink(data.links).id(d => d.id).distance(20))
+                .force("charge", d3.forceManyBody().strength(-20))  // much weaker
                 .force("center", d3.forceCenter(width / 2, height / 2))
-                .force("collision", d3.forceCollide().radius(d => Math.max(4, (Math.sqrt(d.degree||1)*0.8))))
-                .alphaDecay(0.08);
+                .alphaDecay(0.2);
 
               // Compute min/max once
               const weights = data.links.map(l => Math.abs(l.weight ?? l.value ?? 0));
@@ -404,13 +403,14 @@
                 .enter().append("line")
                 .attr("stroke", d => {
                   const nVal = normWeight(d.weight ?? d.value ?? 0);
-                  const gray = Math.round(255 - 125 * nVal);
+                  const gray = Math.round(255 - nVal * 200); // darker max (was 125)
                   return `rgb(${gray},${gray},${gray})`;
                 })
                 .attr("stroke-width", d => {
                   const nVal = normWeight(d.weight ?? d.value ?? 0);
-                  return Math.max(1.0, nVal * 3);   // width scaled to 1–3
+                  return Math.max(1, nVal * 5 + 0.5);  // wider max (was 2.5)
                 });
+
 
               nodeElements = nodeGroup.selectAll("circle")
                 .data(data.nodes)
