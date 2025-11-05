@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Network Graph - Full View</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Lato', Verdana, Helvetica, sans-serif;
+      background: #f5f5f5;
+      overflow: hidden;
+    }
+    .network-graph-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background: white;
+    }
+    .graph-tooltip {
+      position: fixed;
+      background: rgba(0, 0, 0, 0.92);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 4px;
+      pointer-events: none;
+      font-size: 12px;
+      z-index: 2000;
+      display: none;
+      max-width: 250px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      line-height: 1.4;
+    }
+    .graph-tooltip strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 14px;
+      color: #FFD700;
+    }
+  </style>
+</head>
+<body>
+  <div id="network-graph" class="network-graph-container">
+    <div class="graph-tooltip" id="graph-tooltip"></div>
+  </div>
+
+  <script>
+  (function() {
+    const containerId = 'network-graph';
+    const tooltipId = 'graph-tooltip';
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const dataFile = 'graph_data_with_layout.json';
+
+    const container = d3.select("#" + containerId);
+    const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    const g = svg.append("g");
+    const zoom = d3.zoom()
+        .scaleExtent([0.3, 5])
+        .on("zoom", (event) => g.attr("transform", event.transform));
+
+    svg.call(zoom);
+
+    const linkGroup = g.append("g").attr("class", "links");
+    const nodeGroup = g.append("g").attr("class", "nodes");
+
+    function loadGraph(data) {
+      const link = linkGroup.selectAll("line")
+          .data(data.links)
+          .enter().append("line")
+          .attr("stroke", "#000")
+          .attr("stroke-opacity", 0.6)
+          .attr("stroke-width", 1);
+
+      const node = nodeGroup.selectAll("circle")
+          .data(data.nodes)
+          .enter().append("circle")
+          .attr("r", 5)
+          .attr("fill", d => d.color || "#999");
+
+      d3.forceSimulation(data.nodes)
+          .force("link", d3.forceLink(data.links).id(d => d.id).distance(30))
+          .force("charge", d3.forceManyBody().strength(-100))
+          .force("center", d3.forceCenter(width / 2, height / 2))
+          .on("tick", () => {
+              link
+                  .attr("x1", d => d.source.x)
+                  .attr("y1", d => d.source.y)
+                  .attr("x2", d => d.target.x)
+                  .attr("y2", d => d.target.y);
+              node
+                  .attr("cx", d => d.x)
+                  .attr("cy", d => d.y);
+          });
+    }
+
+    d3.json(dataFile).then(loadGraph)
+        .catch(err => console.error('Error loading graph data:', err));
+  })();
+  </script>
+</body>
+</html>

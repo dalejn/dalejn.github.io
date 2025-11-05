@@ -280,194 +280,123 @@
     <tr onmouseout="" onmouseover="">
       <td style="padding:20px;width:25%;vertical-align:middle">
         <div class="one">
-          <!-- Add this where you want the graph to appear in your HTML -->
-          <div id="network-graph" class="network-graph-container">
+            <div id="network-graph" class="network-graph-container">
               <div class="graph-tooltip" id="graph-tooltip"></div>
+            </div>
+            <div style="text-align:center;margin-top:8px;">
+              <a href="graph_full.html" target="_blank" style="font-size:12px; text-decoration:none;">
+                View Full Size ↗
+              </a>
+            </div>
           </div>
 
-          <!-- Add this script before your closing </body> tag -->
-          <!-- Make sure D3.js is loaded first -->
+          <!-- D3 and small graph script -->
           <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-
           <script>
           (function() {
-              // Configuration
-              const containerId = 'network-graph';
-              const tooltipId = 'graph-tooltip';
-              const width = 160;
-              const height = 160;
-              const dataFile = 'graph_data_with_layout.json';
+            const containerId = 'network-graph';
+            const tooltipId = 'graph-tooltip';
+            const width = 160;
+            const height = 160;
+            const dataFile = 'graph_data_with_layout.json';
 
-              // Initialize
-              const container = d3.select(`#${containerId}`);
-              const svg = container.append("svg")
-                  .attr("width", width)
-                  .attr("height", height);
+            const container = d3.select("#" + containerId);
+            const svg = container.append("svg")
+                .attr("width", width)
+                .attr("height", height);
 
-              const g = svg.append("g");
+            const g = svg.append("g");
 
-              // Add zoom
-              const zoom = d3.zoom()
-                  .scaleExtent([0.5, 5])
-                  .on("zoom", (event) => {
-                      g.attr("transform", event.transform);
-                  });
+            const zoom = d3.zoom()
+                .scaleExtent([0.3, 5])
+                .on("zoom", (event) => g.attr("transform", event.transform));
 
-              svg.call(zoom);
+            svg.call(zoom)
+                .on("wheel.zoom", function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }, { passive: false });
 
-              let linkElements, nodeElements, labelElements, simulation;
+            let linkElements, nodeElements, labelElements, simulation;
+            const linkGroup = g.append("g").attr("class", "links");
+            const nodeGroup = g.append("g").attr("class", "nodes");
+            const labelGroup = g.append("g").attr("class", "node-labels");
 
-              // Create groups (links first so they're behind nodes)
-              const linkGroup = g.append("g").attr("class", "links");
-              const nodeGroup = g.append("g").attr("class", "nodes");
-              const labelGroup = g.append("g").attr("class", "node-labels");
+            function loadGraph(data) {
+                linkGroup.selectAll("*").remove();
+                nodeGroup.selectAll("*").remove();
+                labelGroup.selectAll("*").remove();
 
-              // Load and render
-              function loadGraph(data) {
-                  linkGroup.selectAll("*").remove();
-                  nodeGroup.selectAll("*").remove();
-                  labelGroup.selectAll("*").remove();
-                  
-                  // Create force simulation
-                  simulation = d3.forceSimulation(data.nodes)
-                      .force("link", d3.forceLink(data.links).id(d => d.id).distance(30))
-                      .force("charge", d3.forceManyBody().strength(-80))
-                      .force("center", d3.forceCenter(width / 2, height / 2))
-                      .force("collision", d3.forceCollide().radius(8));
+                const useOriginalLayout = data.nodes[0].x !== undefined && data.nodes[0].y !== undefined;
+                if (useOriginalLayout) {
+                    const xExtent = d3.extent(data.nodes, d => d.x);
+                    const yExtent = d3.extent(data.nodes, d => d.y);
+                    const dataWidth = xExtent[1] - xExtent[0];
+                    const dataHeight = yExtent[1] - yExtent[0];
+                    const padding = 10;
+                    const scale = Math.min((width - 2 * padding) / dataWidth, (height - 2 * padding) / dataHeight);
 
-                  // Create links
-                  linkElements = linkGroup.selectAll("line")
-                      .data(data.links)
-                      .enter().append("line")
-                      .attr("stroke", d => (d.weight !== undefined ? d.weight : d.value) > 0 ? "#4CAF50" : "#F44336")
-                      .attr("stroke-width", d => {
-                          const val = d.weight !== undefined ? d.weight : (d.value !== undefined ? d.value : 1);
-                          return Math.max(0.5, Math.abs(val) * 1.5);
-                      });
+                    data.nodes.forEach(node => {
+                        node.scaledX = padding + (node.x - xExtent[0]) * scale;
+                        node.scaledY = padding + (node.y - yExtent[0]) * scale;
+                        node.fx = node.scaledX;
+                        node.fy = node.scaledY;
+                    });
 
-                  // Create nodes
-                  nodeElements = nodeGroup.selectAll("circle")
-                      .data(data.nodes)
-                      .enter().append("circle")
-                      .attr("r", d => Math.max(1.5, Math.sqrt(d.degree || 1) * 0.8 + 1))
-                      .attr("fill", d => d.color || "#999")
-                      .on("mouseover", handleMouseOver)
-                      .on("mouseout", handleMouseOut)
-                      .call(d3.drag()
-                          .on("start", dragStarted)
-                          .on("drag", dragged)
-                          .on("end", dragEnded));
+                    simulation = d3.forceSimulation(data.nodes)
+                        .force("link", d3.forceLink(data.links).id(d => d.id).distance(30))
+                        .force("charge", d3.forceManyBody().strength(-50))
+                        .alphaDecay(0.05);
+                } else {
+                    simulation = d3.forceSimulation(data.nodes)
+                        .force("link", d3.forceLink(data.links).id(d => d.id).distance(30))
+                        .force("charge", d3.forceManyBody().strength(-80))
+                        .force("center", d3.forceCenter(width / 2, height / 2))
+                        .force("collision", d3.forceCollide().radius(8));
+                }
 
-                  // Create labels (initially hidden)
-                  labelElements = labelGroup.selectAll("text")
-                      .data(data.nodes)
-                      .enter().append("text")
-                      .text(d => d.name || d.id)
-                      .attr("font-size", "4px")
-                      .attr("text-anchor", "middle")
-                      .attr("pointer-events", "none")
-                      .attr("fill", "#333")
-                      .attr("dy", d => Math.max(1.5, Math.sqrt(d.degree || 1) * 0.8 + 1) + 5)
-                      .style("display", "none");
+                linkElements = linkGroup.selectAll("line")
+                    .data(data.links)
+                    .enter().append("line")
+                    .attr("stroke", "#000")
+                    .attr("stroke-opacity", 0.6)
+                    .attr("stroke-width", 0.5);
 
-                  // Update positions on each tick
-                  simulation.on("tick", updatePositions);
-                  
-                  // Fit to view after initial layout
-                  setTimeout(() => {
-                      const bounds = g.node().getBBox();
-                      const fullWidth = width;
-                      const fullHeight = height;
-                      const scale = 0.85 * Math.min(fullWidth / bounds.width, fullHeight / bounds.height);
-                      const translate = [
-                          fullWidth / 2 - scale * (bounds.x + bounds.width / 2),
-                          fullHeight / 2 - scale * (bounds.y + bounds.height / 2)
-                      ];
-                      svg.call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-                  }, 500);
-              }
+                nodeElements = nodeGroup.selectAll("circle")
+                    .data(data.nodes)
+                    .enter().append("circle")
+                    .attr("r", 2)
+                    .attr("fill", d => d.color || "#999");
 
-              function updatePositions() {
-                  linkElements
-                      .attr("x1", d => d.source.x)
-                      .attr("y1", d => d.source.y)
-                      .attr("x2", d => d.target.x)
-                      .attr("y2", d => d.target.y);
+                simulation.on("tick", () => {
+                    linkElements
+                        .attr("x1", d => d.source.x)
+                        .attr("y1", d => d.source.y)
+                        .attr("x2", d => d.target.x)
+                        .attr("y2", d => d.target.y);
 
-                  nodeElements
-                      .attr("cx", d => d.x)
-                      .attr("cy", d => d.y);
+                    nodeElements
+                        .attr("cx", d => d.x)
+                        .attr("cy", d => d.y);
+                });
 
-                  labelElements
-                      .attr("x", d => d.x)
-                      .attr("y", d => d.y);
-              }
+                if (useOriginalLayout) {
+                    linkElements
+                        .attr("x1", d => d.source.fx)
+                        .attr("y1", d => d.source.fy)
+                        .attr("x2", d => d.target.fx)
+                        .attr("y2", d => d.target.fy);
+                    nodeElements
+                        .attr("cx", d => d.fx)
+                        .attr("cy", d => d.fy);
+                }
+            }
 
-              function dragStarted(event, d) {
-                  if (!event.active) simulation.alphaTarget(0.3).restart();
-                  d.fx = d.x;
-                  d.fy = d.y;
-              }
-
-              function dragged(event, d) {
-                  d.fx = event.x;
-                  d.fy = event.y;
-              }
-
-              function dragEnded(event, d) {
-                  if (!event.active) simulation.alphaTarget(0);
-                  // Release after delay to spring back
-                  setTimeout(() => {
-                      d.fx = null;
-                      d.fy = null;
-                      simulation.alpha(0.3).restart();
-                  }, 500);
-              }
-
-              function handleMouseOver(event, d) {
-                  d3.select(this).classed("highlighted", true);
-
-                  const connectedNodes = new Set([d.id]);
-                  linkElements.each(function(l) {
-                      if (l.source.id === d.id || l.target.id === d.id) {
-                          d3.select(this).classed("highlighted", true);
-                          connectedNodes.add(l.source.id);
-                          connectedNodes.add(l.target.id);
-                      } else {
-                          d3.select(this).classed("dimmed", true);
-                      }
-                  });
-                  
-                  nodeElements.classed("dimmed", n => !connectedNodes.has(n.id));
-                  labelElements.classed("dimmed", n => !connectedNodes.has(n.id));
-
-                  const tooltip = d3.select(`#${tooltipId}`);
-                  tooltip.style("display", "block")
-                      .html(`<strong>${d.name || d.id}</strong><br>${d.type || 'Node'}`)
-                      .style("left", (event.pageX + 10) + "px")
-                      .style("top", (event.pageY - 30) + "px");
-              }
-
-              function handleMouseOut() {
-                  nodeElements.classed("highlighted", false).classed("dimmed", false);
-                  linkElements.classed("highlighted", false).classed("dimmed", false);
-                  labelElements.classed("dimmed", false);
-                  d3.select(`#${tooltipId}`).style("display", "none");
-              }
-
-              // Load data from external JSON file
-              d3.json(dataFile).then(data => {
-                  console.log('Graph data loaded:', data.nodes.length, 'nodes,', data.links.length, 'links');
-                  loadGraph(data);
-              }).catch(error => {
-                  console.error('Error loading graph data:', error);
-              });
+            d3.json(dataFile).then(loadGraph)
+                .catch(error => console.error('Error loading graph data:', error));
           })();
           </script>
 
-        </div>
-      </td>
-    
       <td valign="top" width="75%">
         <papertitle>Neural dynamics of cognitive control: current tensions and future promise</papertitle><br>
         <a target="_blank" rel="noopener noreferrer" href="https://osf.io/preprints/psyarxiv/za7yx_v1"><strong>(Submitted)</strong></a><br><br>
@@ -485,13 +414,12 @@
         <a target="_blank" rel="noopener noreferrer" class="link link_preprint" rel="external" href="https://osf.io/preprints/psyarxiv/za7yx_v1">Preprint</a> &nbsp <a target="_blank" rel="noopener noreferrer" class="link link_pdf" href="Zhou_cognitiveControl_review.pdf">PDF</a><br><br>
         <details>
         <summary>More</summary>
-          <p>In this review, we explain a novel network and dynamical systems approach to understanding cognitive control and describe its empirical evidence from neuroscience, psychology, and physics. While cognitive, computational, and systems neuroscience research has made substantial progress in studying the component processes of cognitive control, we argue that tensions and limitations persist and can be traced back to the philosophical and psychological origins of the control construct. These tensions include usage of metaphors for power structures and cultural expectations of how control should work. Such tensions limit the space of neuroscientific hypotheses tested and make it more difficult to weigh evidence against the intuitions of cultural metaphors and norms. Importantly, the theory converges with established findings, provides new mathematical tools and intuitions for understanding control loops across levels of analysis, and naturally produces graded predictions of control across brain regions and modules of psychological function that have been unconsidered, marginalized, or indirectly linked. We describe ways to integrate complementary approaches to improve our understanding of cognitive control.</p>
+          <p>In this review, we explain a novel network and dynamical systems approach to understanding cognitive control and describe its empirical evidence from neuroscience, psychology, and physics. While cognitive, computational, and systems neuroscience research has made substantial progress in studying the component processes of cognitive control, we argue that tensions and limitations persist and can be traced back to the philosophical and psychological origins of the control construct. These tensions include usage of metaphors for power structures and cultural expectations of how control should work. Such tensions limit the space of neuroscientific hypotheses tested and make it more difficult to weigh evidence against the intuitions of cultural metaphors and norms. Importantly, the theory converges with established findings, provides new mathematical tools and intuitions for understanding control loops across levels of analysis, and naturally produces graded predictions of control across brain regions and modules of psychological function that have been unconsidered, marginalized, or indirectly linked. We describe ways to integrate complementary approaches in psychology, neuroscience, and network science to improve our understanding of cognitive control.</p>
           <br>
         </details>
       </td>
       </tr>
       <!-- paper end -->
-
 
 <!-- paper begin -->
             <tr onmouseout="repulse_stop()" onmouseover="repulse_start()">
