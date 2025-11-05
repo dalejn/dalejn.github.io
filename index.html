@@ -336,7 +336,7 @@
             svg.call(zoom);
 
             // --- initial zoom out ---
-            const initialScale = 0.6;    // <1 = zoomed out, adjust as needed
+            const initialScale = 0.3;    // <1 = zoomed out, adjust as needed
             const initialTranslate = [width/2 * (1 - initialScale), height/2 * (1 - initialScale)];
             svg.call(zoom.transform, d3.zoomIdentity.translate(...initialTranslate).scale(initialScale));
 
@@ -393,9 +393,9 @@
                        .distance(d => {
                          // Shorter distance for strong links to tighten clusters
                          const val = Math.abs(d.weight ?? d.value ?? 0);
-                         return 15 + (1 - val) * 20;  // ranges ~15–35
+                         return 15 + (1 - val) * 15;  // ranges ~15–35
                        }))
-                .force("charge", d3.forceManyBody().strength(-50)) // stronger repulsion to separate clusters
+                .force("charge", d3.forceManyBody().strength(-650) // stronger repulsion to separate clusters
                 .force("center", d3.forceCenter(width/2, height/2))
                 .force("collision", d3.forceCollide().radius(d => Math.max(3, Math.sqrt(d.degree || 1) * 0.8)))
                 .alphaDecay(0.08);
