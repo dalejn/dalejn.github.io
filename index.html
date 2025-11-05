@@ -334,6 +334,12 @@
             // zoom configuration
             const zoom = d3.zoom().scaleExtent([0.25, 6]).on("zoom", (event) => g.attr("transform", event.transform));
             svg.call(zoom);
+
+            // --- initial zoom out ---
+            const initialScale = 0.6;    // <1 = zoomed out, adjust as needed
+            const initialTranslate = [width/2 * (1 - initialScale), height/2 * (1 - initialScale)];
+            svg.call(zoom.transform, d3.zoomIdentity.translate(...initialTranslate).scale(initialScale));
+
             // prevent page scrolling but keep d3 zoom behavior by using native listener (do not override d3's wheel listener)
             svg.node().addEventListener('wheel', function(e){ e.preventDefault(); }, { passive: false });
             // disable double-click zoom
