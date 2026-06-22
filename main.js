@@ -130,3 +130,29 @@ $(document).ready(function() {
     $(window).bind('orientationchange', onOrientationChange);
     onOrientationChange();
 });
+
+// Latest news scroll cue: hide the "scroll" hint once the box is at the bottom,
+// and don't show it at all if there's nothing to scroll.
+(function () {
+  function initLatestScrollCue() {
+    var box = document.querySelector('.latest-scroll');
+    var wrap = document.querySelector('.latest-scroll-wrap');
+    if (!box || !wrap) return;
+
+    function update() {
+      var nothingToScroll = box.scrollHeight <= box.clientHeight + 4;
+      var atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 4;
+      wrap.classList.toggle('is-end', nothingToScroll || atEnd);
+    }
+
+    box.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLatestScrollCue);
+  } else {
+    initLatestScrollCue();
+  }
+})();
